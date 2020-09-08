@@ -37,8 +37,6 @@ from exceptiondef import ConflictingState, NotFound, Forbidden
 from package_parser import PackageParser
 from async_dispatcher import AsyncDispatcher
 from lifecycle_states import ApplicationState, PackageDeploymentState
-from kubernetes.client.rest import ApiException
-from kubernetes import client, config
 
 def milli_time():
     return int(round(time.time() * 1000))
@@ -456,53 +454,33 @@ class DeploymentManager(object):
         return record
     
     
-    # XXXX
-    def get_pod_logs(self, pod_name, namespace_id):
-        config.load_incluster_config()
-        logging.info('Inside pod log121 *******' + pod_name)
-        try:
-            configuration = client.Configuration()
-            api_client = client.ApiClient(configuration)
-            api_instance = client.CoreV1Api(api_client)
-            api_response = api_instance.read_namespaced_pod_log(name= str(pod_name)+"-driver", namespace= namespace_id)
-            logging.info('Inside pod log *******' + pod_name)
-            logging.info(api_response)
-            return api_response
-            
-        except ApiException as e:
-            print('Exception in getting status')
     
-    def get_pod_state(self, pod_name, namespace_id):
-        config.load_incluster_config()
-        logging.info('Inside pod state before try *******' + pod_name)
-        try:
-            configuration = client.Configuration()
-            api_client = client.ApiClient(configuration)
-            api_instance = client.CoreV1Api(api_client)
-            api_response_state = api_instance.read_namespaced_pod_status(name= str(pod_name)+"-driver", namespace=namespace_id)
-            logging.info('Inside pod state *******' + pod_name)
-            return api_response_state.status.phase
-        except ApiException as e:
-            print('Exception in getting status')
 
     def get_application_log(self, application, user_name):
         application_owner = self._get_application_owner(application)
         self._authorize(user_name, Resources.APPLICATION, application_owner, Actions.READ)
 
-        logging.info('get_application_log')
-        record = self.get_pod_logs(application, 'pnda')
-        return record
+        try:
+            create_data = self._application_registrar.get_create_data(application)
+            log_data = self._application_creator.get_application_log(application, create_data)
+            return log_data
+        except Exception as ex:
+            return ex
+
+
 
     def get_application_state(self, application, user_name):
         application_owner = self._get_application_owner(application)
         self._authorize(user_name, Resources.APPLICATION, application_owner, Actions.READ)
 
-        logging.info('get_application_state')
-        record = self.get_pod_state(application, 'pnda')
-        return record
+        try:
+            create_data = self._application_registrar.get_create_data(application)
+            state_data = self._application_creator.get_application_state(application, create_data)
+            return state_data
+        except Exception as ex:
+            return ex
 
-
-    # XXXX
+    
 
     def create_application(self, package, application, overrides, user_name):
         logging.info('create_application')

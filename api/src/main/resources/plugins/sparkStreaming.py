@@ -207,5 +207,33 @@ class SparkStreamingCreator(Common):
         json_path = create_data['crdjson']
         self.create_custom_resource_object("%s/%s.json" % (json_path,application_name))
 
+    def get_pod_logs(self, pod_name, namespace_id):
+        config.load_incluster_config()
+        logging.info('Inside pod log121 *******' + pod_name)
+        try:
+            configuration = client.Configuration()
+            api_client = client.ApiClient(configuration)
+            api_instance = client.CoreV1Api(api_client)
+            api_response = api_instance.read_namespaced_pod_log(name=str(pod_name) + "-driver", namespace=namespace_id)
+            logging.info('Inside pod log *******' + pod_name)
+            logging.info(api_response)
+            return api_response
+
+        except ApiException as e:
+            return e
+
+    def get_pod_state(self, pod_name, namespace_id):
+        config.load_incluster_config()
+        logging.info('Inside pod state before try *******' + pod_name)
+        try:
+            configuration = client.Configuration()
+            api_client = client.ApiClient(configuration)
+            api_instance = client.CoreV1Api(api_client)
+            api_response_state = api_instance.read_namespaced_pod_status(name=str(pod_name) + "-driver", namespace=namespace_id)
+            logging.info('Inside pod state *******' + pod_name)
+            return api_response_state.status.phase
+        except ApiException as e:
+            return e
+
     def _control_component(self, cmds):
         deployer_utils.exec_cmds(cmds)
